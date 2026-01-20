@@ -72,8 +72,8 @@ plot(rsi - 50, title="RSI - 50 (Offset)", color=rsi > 70 ? col_bearish : rsi < 3
 
 // === REFERENCE LINES ===
 zero_line = plot(0, title="Zero Line", color=col_zero, linewidth=1)
-plot(mom_overbought, title="Mom Overbought", color=color.new(col_bearish, 50), linewidth=1, style=plot.style_solid)
-plot(mom_oversold, title="Mom Oversold", color=color.new(col_bullish, 50), linewidth=1, style=plot.style_solid)
+plot(mom_overbought, title="Mom Overbought", color=color.new(col_bearish, 50), linewidth=1)
+plot(mom_oversold, title="Mom Oversold", color=color.new(col_bullish, 50), linewidth=1)
 
 // RSI Levels (for reference)
 hline(rsi_overbought, "RSI OB", color=color.new(col_bearish, 60), linestyle=hline.style_dotted)
