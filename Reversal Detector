@@ -1,3 +1,4 @@
+51
 //@version=6
 indicator("Multi-Timeframe Reversal Detector: Overbought/Oversold Levels", overlay=false)
 
@@ -48,8 +49,8 @@ bull_div = false
 bear_div = false
 
 if use_divergence
-    bull_div = ta.lowestbars(mom, mom_length) == 0 and low > low[mom_length]
-    bear_div = ta.highestbars(mom, mom_length) == 0 and high < high[mom_length]
+    bull_div := ta.lowestbars(mom, mom_length) == 0 and low > low[mom_length]
+    bear_div := ta.highestbars(mom, mom_length) == 0 and high < high[mom_length]
 
 // === COLORS ===
 col_bullish = color.new(color.lime, 0)
@@ -88,11 +89,11 @@ bgcolor(mom > mom_overbought ? col_zone_bear : na, title="Overbought Zone")
 // === STRONG SIGNAL MARKERS ===
 // Strong Bullish Signal (oversold + confirmed reversal)
 plotshape(bullish_signal, location=location.belowbar, style=shape.triangleup, 
-          size=size.medium, color=col_bullish, title="Bullish Reversal Signal", text="BULL")
+          size=size.large, color=col_bullish, title="Bullish Reversal Signal", text="BULL")
 
 // Strong Bearish Signal (overbought + confirmed reversal)
 plotshape(bearish_signal, location=location.abovebar, style=shape.triangledown, 
-          size=size.medium, color=col_bearish, title="Bearish Reversal Signal", text="BEAR")
+          size=size.large, color=col_bearish, title="Bearish Reversal Signal", text="BEAR")
 
 // === WEAK SIGNAL MARKERS ===
 // Weak oversold (potential entry zone)
