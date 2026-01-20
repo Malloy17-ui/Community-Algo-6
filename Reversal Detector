@@ -1,0 +1,117 @@
+//@version=6
+indicator("Multi-Timeframe Reversal Detector: Overbought/Oversold Levels", overlay=false)
+
+// === INPUTS ===
+rsi_length = input.int(14, title="RSI Length", minval=5, maxval=50)
+rsi_overbought = input.float(70, title="RSI Overbought Level", minval=50, maxval=100)
+rsi_oversold = input.float(30, title="RSI Oversold Level", minval=0, maxval=50)
+
+mom_length = input.int(14, title="Momentum Length", minval=5, maxval=50)
+mom_overbought = input.float(60, title="Momentum Overbought", minval=20, maxval=100)
+mom_oversold = input.float(-60, title="Momentum Oversold", minval=-100, maxval=-20)
+
+use_rsi = input.bool(true, title="Use RSI Signals")
+use_momentum = input.bool(true, title="Use Momentum Signals")
+use_divergence = input.bool(true, title="Detect Divergence")
+
+// === INDICATORS CORE ===
+// RSI Calculation
+rsi = ta.rsi(close, rsi_length)
+
+// Momentum Calculation
+price = close
+mom = price - price[mom_length]
+future_mom = ta.linreg(mom, 3, 0)
+
+// === SIGNAL DETECTION ===
+// RSI-based signals
+rsi_oversold_signal = rsi < rsi_oversold
+rsi_overbought_signal = rsi > rsi_overbought
+rsi_bullish_potential = rsi < rsi_oversold and close > open  // Bullish candle in oversold
+rsi_bearish_potential = rsi > rsi_overbought and close < open  // Bearish candle in overbought
+
+// Momentum-based signals
+mom_oversold_signal = mom < mom_oversold
+mom_overbought_signal = mom > mom_overbought
+mom_bullish_potential = mom < mom_oversold and mom > mom[1]  // Momentum bottoming
+mom_bearish_potential = mom > mom_overbought and mom < mom[1]  // Momentum topping
+
+// === COMBINED SIGNAL LOGIC ===
+// Bullish reversal: Oversold + Potential reversal candle
+bullish_signal = (rsi_bullish_potential or mom_bullish_potential) and (rsi_oversold_signal or mom_oversold_signal)
+
+// Bearish reversal: Overbought + Potential reversal candle
+bearish_signal = (rsi_bearish_potential or mom_bearish_potential) and (rsi_overbought_signal or mom_overbought_signal)
+
+// === DIVERGENCE DETECTION ===
+bull_div = false
+bear_div = false
+
+if use_divergence
+    bull_div = ta.lowestbars(mom, mom_length) == 0 and low > low[mom_length]
+    bear_div = ta.highestbars(mom, mom_length) == 0 and high < high[mom_length]
+
+// === COLORS ===
+col_bullish = color.new(color.lime, 0)
+col_bearish = color.new(color.red, 0)
+col_weak_bullish = color.new(color.lime, 60)
+col_weak_bearish = color.new(color.red, 60)
+col_neutral = color.gray
+col_zone_bull = color.new(color.lime, 90)
+col_zone_bear = color.new(color.red, 90)
+col_zero = color.gray
+
+// === PLOTTING ===
+// Main Momentum
+plot(mom, title="Momentum", color=mom >= 0 ? col_bullish : col_bearish, linewidth=2)
+plot(future_mom, title="Projected Momentum", color=color.new(color.yellow, 30), linewidth=1, style=plot.style_line)
+
+// RSI on secondary scale (informational)
+plot(rsi - 50, title="RSI - 50 (Offset)", color=rsi > 70 ? col_bearish : rsi < 30 ? col_bullish : col_neutral, linewidth=1)
+
+// === REFERENCE LINES ===
+zero_line = plot(0, title="Zero Line", color=col_zero, linewidth=1)
+plot(mom_overbought, title="Mom Overbought", color=color.new(col_bearish, 50), linewidth=1, style=plot.style_dashed)
+plot(mom_oversold, title="Mom Oversold", color=color.new(col_bullish, 50), linewidth=1, style=plot.style_dashed)
+
+// RSI Levels (for reference)
+hline(rsi_overbought, "RSI OB", color=color.new(col_bearish, 60), linestyle=hline.style_dotted)
+hline(rsi_oversold, "RSI OS", color=color.new(col_bullish, 60), linestyle=hline.style_dotted)
+hline(50, "RSI Mid", color=color.gray, linestyle=hline.style_dotted)
+
+// === ZONE HIGHLIGHTING ===
+// Highlight oversold zones (bullish opportunity)
+bgcolor(mom < mom_oversold ? col_zone_bull : na, title="Oversold Zone")
+// Highlight overbought zones (bearish opportunity)
+bgcolor(mom > mom_overbought ? col_zone_bear : na, title="Overbought Zone")
+
+// === STRONG SIGNAL MARKERS ===
+// Strong Bullish Signal (oversold + confirmed reversal)
+plotshape(bullish_signal, location=location.belowbar, style=shape.triangleup, 
+          size=size.medium, color=col_bullish, title="Bullish Reversal Signal", text="BULL")
+
+// Strong Bearish Signal (overbought + confirmed reversal)
+plotshape(bearish_signal, location=location.abovebar, style=shape.triangledown, 
+          size=size.medium, color=col_bearish, title="Bearish Reversal Signal", text="BEAR")
+
+// === WEAK SIGNAL MARKERS ===
+// Weak oversold (potential entry zone)
+plotshape(rsi_oversold_signal and not bullish_signal, location=location.belowbar, 
+          style=shape.circle, size=size.small, color=col_weak_bullish, title="RSI Oversold", text="OS")
+
+// Weak overbought (potential exit/short zone)
+plotshape(rsi_overbought_signal and not bearish_signal, location=location.abovebar, 
+          style=shape.circle, size=size.small, color=col_weak_bearish, title="RSI Overbought", text="OB")
+
+// === DIVERGENCE MARKERS ===
+plotshape(bull_div, location=location.belowbar, style=shape.labelup,
+          color=col_bullish, text="DIV UP", textcolor=color.white, size=size.tiny, title="Bullish Divergence")
+
+plotshape(bear_div, location=location.abovebar, style=shape.labeldown,
+          color=col_bearish, text="DIV DN", textcolor=color.white, size=size.tiny, title="Bearish Divergence")
+
+// === ALERTS ===
+alertcondition(bullish_signal, title="BULLISH REVERSAL", message="Strong Bullish Signal - Oversold + Reversal Candle")
+alertcondition(bearish_signal, title="BEARISH REVERSAL", message="Strong Bearish Signal - Overbought + Reversal Candle")
+alertcondition(rsi_oversold_signal, title="RSI OVERSOLD", message="RSI entered oversold territory")
+alertcondition(rsi_overbought_signal, title="RSI OVERBOUGHT", message="RSI entered overbought territory")
